@@ -1,13 +1,13 @@
 {
-   "name": "vaimo/kustom-module-orderlines",
+    "name": "kustom/module-orderlines",
     "description": "Kustom Orderlines Magento 2 Extension",
     "type": "magento2-module",
     "license": "Apache-2.0",
-    "version": "3.0.17",
+    "version": "3.1.0",
     "require": {
-        "vaimo/kustom-module-admin-settings": "^1",
-        "vaimo/kustom-module-base": "11.0.*",
-        "vaimo/kustom-module-logger": "3.0.9",
+        "kustom/module-admin-settings": "^1",
+        "kustom/module-base": "^11.0",
+        "kustom/module-logger": "^3.0",
         "magento/framework": "^103",
         "magento/module-payment": "^100.1|^100.4",
         "magento/module-quote": "^101.0|^101.2",
@@ -19,6 +19,8 @@
         "psr-4": {
             "Klarna\\Orderlines\\": "."
         },
-        "files": [ "registration.php" ]
+        "files": [
+            "registration.php"
+        ]
     }
 }
