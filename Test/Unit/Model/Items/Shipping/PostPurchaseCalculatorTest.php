@@ -35,25 +35,64 @@ class PostPurchaseCalculatorTest extends TestCase
     public function testCalculateSettingUnitPrice(): void
     {
         $this->calculator->calculate($this->dataHolder, $this->order);
-        static::assertEquals(599, $this->calculator->getUnitPrice());
+        static::assertEquals(1250, $this->calculator->getUnitPrice());
     }
 
     public function testCalculateSettingTaxRate(): void
     {
         $this->calculator->calculate($this->dataHolder, $this->order);
-        static::assertEquals(700, $this->calculator->getTaxRate());
+        static::assertEquals(2500, $this->calculator->getTaxRate());
     }
 
     public function testCalculateSettingTotalAmount(): void
     {
         $this->calculator->calculate($this->dataHolder, $this->order);
-        static::assertEquals(599, $this->calculator->getTotalAmount());
+        static::assertEquals(1250, $this->calculator->getTotalAmount());
     }
 
-    public function testCalculateSettingTaxAmount(): void
+    public function testCalculateSettingTaxAmountFromBaseCurrency(): void
     {
         $this->calculator->calculate($this->dataHolder, $this->order);
-        static::assertEquals(900, $this->calculator->getTaxAmount());
+        static::assertEquals(250, $this->calculator->getTaxAmount());
+    }
+
+    public function testCalculateShippingAlreadyInvoicedHasNoTaxAndNoRate(): void
+    {
+        $dataHolder = $this->mockFactory->create(DataHolder::class);
+        $dataHolder->method('getBaseShippingInclTax')
+            ->willReturn(0.0);
+
+        $this->calculator->calculate($dataHolder, $this->order);
+        static::assertEquals(0, $this->calculator->getTotalAmount());
+        static::assertEquals(0, $this->calculator->getTaxAmount());
+        static::assertEquals(0, $this->calculator->getTaxRate());
+    }
+
+    public function testCalculatePartialShippingRefundUsesProportionalTax(): void
+    {
+        $dataHolder = $this->mockFactory->create(DataHolder::class);
+        $dataHolder->method('getBaseShippingInclTax')
+            ->willReturn(5.0);
+
+        $this->calculator->calculate($dataHolder, $this->order);
+        static::assertEquals(500, $this->calculator->getTotalAmount());
+        static::assertEquals(100, $this->calculator->getTaxAmount());
+        static::assertEquals(2500, $this->calculator->getTaxRate());
+    }
+
+    public function testCalculateOrderWithoutShippingTax(): void
+    {
+        $order = $this->mockFactory->create(Order::class);
+        $order->method('getBaseShippingAmount')
+            ->willReturn(10.0);
+        $order->method('getBaseShippingInclTax')
+            ->willReturn(10.0);
+        $order->method('getBaseShippingTaxAmount')
+            ->willReturn(0.0);
+
+        $this->calculator->calculate($this->dataHolder, $order);
+        static::assertEquals(0, $this->calculator->getTaxAmount());
+        static::assertEquals(0, $this->calculator->getTaxRate());
     }
 
     public function testCalculateSettingTitle(): void
@@ -94,21 +133,20 @@ class PostPurchaseCalculatorTest extends TestCase
         $this->dataHolder->setShippingAddress($address);
 
         $this->dataHolder->method('getBaseShippingInclTax')
-            ->willReturn(5.99);
-        $this->dependencyMocks['calculator']->method('getTaxRate')
-            ->willReturn(7.0);
+            ->willReturn(12.5);
+        $this->order->method('getBaseShippingAmount')
+            ->willReturn(10.0);
+        $this->order->method('getBaseShippingInclTax')
+            ->willReturn(12.5);
+        $this->order->method('getBaseShippingTaxAmount')
+            ->willReturn(2.5);
+        // Order currency value; must not be used for the base currency order line
         $this->order->method('getShippingTaxAmount')
-            ->willReturn(9);
+            ->willReturn(30.0);
         $this->order->method('getShippingDescription')
             ->willReturn('my_shipping_description');
         $this->dependencyMocks['dataConverter']
             ->method('toApiFloat')
-            ->willReturnCallback(fn($float) =>
-                match($float) {
-                    5.99 => 599,
-                    7.0 => 700,
-                    9 => 900
-                }
-            );
+            ->willReturnCallback(fn($float) => (int) round($float * 100));
     }
 }
