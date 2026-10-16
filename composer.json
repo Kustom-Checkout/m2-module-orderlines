@@ -3,7 +3,7 @@
     "description": "Kustom Orderlines Magento 2 Extension",
     "type": "magento2-module",
     "license": "Apache-2.0",
-    "version": "3.1.2",
+    "version": "3.1.3",
     "require": {
         "kustom/module-admin-settings": "^1 || ^2",
         "kustom/module-base": "^11.0 || ^12.0",
