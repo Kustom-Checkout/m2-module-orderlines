@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.1.4 / 2026-11-09
+## 3.1.3 / 2026-11-09
 
 ### Breaking changes
 * None
@@ -10,19 +10,8 @@
 
 ### Fixes
 * KUSTOM-124: Fixed shipping tax rate on capture and refund to use the rate Magento applied
-* KUSTOM-124: Fixed item amounts on captures and refunds of part of the ordered quantity
-
-## 3.1.3 / 2026-10-16
-
-### Breaking changes
-* None
-
-### Features / changes
-* None
-
-### Fixes
-* KUSTOM-124: Fixed shipping tax rate 0 on capture and refund
 * KUSTOM-124: Fixed shipping tax sent on captures without shipping
+* KUSTOM-124: Fixed item amounts on captures and refunds of part of the ordered quantity
 
 ## 3.1.2 / 2026-10-12
 
