@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -11,11 +11,15 @@ namespace Klarna\Orderlines\Test\Unit\Model\Items\Surcharge;
 
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
+use Klarna\Orderlines\Model\Fpt\Validator as FptValidator;
+use Klarna\Orderlines\Model\ItemGenerator;
 use Klarna\Orderlines\Model\Items\Surcharge\Handler;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use Klarna\Orderlines\Model\Items\Surcharge\Processor;
+use Klarna\Orderlines\Model\Items\Surcharge\Validator;
 use Magento\Quote\Model\Quote;
 use Magento\Sales\Model\Order;
 use Magento\Store\Model\Store;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Surcharge\Handler
@@ -23,97 +27,120 @@ use Magento\Store\Model\Store;
 class HandlerTest extends TestCase
 {
     /**
-     * @var Handler
-     */
-    private Handler $handler;
-    /**
-     * @var Parameter
-     */
-    private Parameter $parameter;
-    /**
      * @var DataHolder
      */
     private DataHolder $dataHolder;
     /**
      * @var Quote
      */
-    private Quote $magentoQuote;
+    private Quote $quote;
     /**
      * @var Order
      */
-    private Order $magentoOrder;
+    private Order $order;
+    /**
+     * @var Validator
+     */
+    private Validator $validator;
+    /**
+     * @var FptValidator
+     */
+    private FptValidator $fptValidator;
 
     public function testCollectPrePurchaseNotUsableAndThereforeNotProcessable(): void
     {
-        $this->dependencyMocks['fptValidator']->method('isFptUsable')
+        $this->fptValidator = $this->createStub(FptValidator::class);
+        $this->fptValidator->method('isFptUsable')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects($this->never())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::never())
             ->method('process');
 
-        $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->magentoQuote);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPrePurchase($this->createStub(Parameter::class), $this->dataHolder, $this->quote);
     }
 
     public function testCollectPrePurchaseUsableAndThereforeProcessable(): void
     {
-        $this->dependencyMocks['fptValidator']->method('isFptUsable')
+        $this->fptValidator = $this->createStub(FptValidator::class);
+        $this->fptValidator->method('isFptUsable')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects($this->once())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::once())
             ->method('process');
 
-        $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->magentoQuote);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPrePurchase($this->createStub(Parameter::class), $this->dataHolder, $this->quote);
     }
 
     public function testCollectPostPurchaseNotUsableAndThereforeNotProcessable(): void
     {
-        $this->dependencyMocks['fptValidator']->method('isFptUsable')
+        $this->fptValidator = $this->createStub(FptValidator::class);
+        $this->fptValidator->method('isFptUsable')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects($this->never())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::never())
             ->method('process');
 
-        $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->magentoOrder);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPostPurchase($this->createStub(Parameter::class), $this->dataHolder, $this->order);
     }
 
     public function testCollectPostPurchaseUsableAndThereforeProcessable(): void
     {
-        $this->dependencyMocks['fptValidator']->method('isFptUsable')
+        $this->fptValidator = $this->createStub(FptValidator::class);
+        $this->fptValidator->method('isFptUsable')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects($this->once())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::once())
             ->method('process');
 
-        $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->magentoOrder);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPostPurchase($this->createStub(Parameter::class), $this->dataHolder, $this->order);
     }
 
     public function testFetchNotFetchableImpliesNoOrderlineItemAdded(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isFetchable')
             ->willReturn(false);
-        $this->parameter->expects($this->never())
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::never())
             ->method('addOrderLine');
 
-        $this->handler->fetch($this->parameter);
+        $this->buildHandler($this->createStub(Processor::class))->fetch($parameter);
     }
 
     public function testFetchFetchableImpliesOrderlineItemAdded(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isFetchable')
             ->willReturn(true);
-        $this->parameter->expects($this->once())
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('addOrderLine');
 
-        $this->handler->fetch($this->parameter);
+        $this->buildHandler($this->createStub(Processor::class))->fetch($parameter);
     }
 
     protected function setUp(): void
     {
-        $this->handler = parent::setUpMocks(Handler::class);
-        
-        $this->parameter = $this->mockFactory->create(Parameter::class);
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->magentoQuote = $this->mockFactory->create(Quote::class);
-        $this->magentoOrder = $this->mockFactory->create(Order::class);
-
-        $store = $this->mockFactory->create(Store::class);
+        $this->validator = $this->createStub(Validator::class);
+        $this->fptValidator = $this->createStub(FptValidator::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
         $this->dataHolder->method('getStore')
-            ->willReturn($store);
+            ->willReturn($this->createStub(Store::class));
+        $this->quote = $this->createStub(Quote::class);
+        $this->order = $this->createStub(Order::class);
+    }
+
+    private function buildHandler(Processor $processor): Handler
+    {
+        return new Handler(
+            $this->createStub(ItemGenerator::class),
+            $this->fptValidator,
+            $this->validator,
+            $processor
+        );
     }
 }

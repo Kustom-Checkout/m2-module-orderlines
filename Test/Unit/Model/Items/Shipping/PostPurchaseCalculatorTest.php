@@ -9,21 +9,32 @@ declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Shipping;
 
+use Klarna\Base\Helper\DataConverter;
+use Klarna\Orderlines\Model\Calculator\Shipping as ShippingCalculator;
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Items\Shipping\PostPurchaseCalculator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Sales\Model\Order;
-use Magento\Sales\Model\Order\Address;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Shipping\PostPurchaseCalculator
  */
+#[AllowMockObjectsWithoutExpectations]
 class PostPurchaseCalculatorTest extends TestCase
 {
     /**
      * @var PostPurchaseCalculator
      */
     private PostPurchaseCalculator $calculator;
+    /**
+     * @var ShippingCalculator
+     */
+    private ShippingCalculator $shippingCalculator;
+    /**
+     * @var DataConverter
+     */
+    private DataConverter $dataConverter;
     /**
      * @var DataHolder
      */
@@ -60,7 +71,7 @@ class PostPurchaseCalculatorTest extends TestCase
     public function testCalculateShippingAlreadyInvoicedHasNoTaxAndNoRate(): void
     {
         $dataHolder = $this->createDataHolder(0.0);
-        $this->dependencyMocks['calculator']->expects(static::never())
+        $this->shippingCalculator->expects(static::never())
             ->method('getTaxRateByOrder');
 
         $this->calculator->calculate($dataHolder, $this->order);
@@ -79,7 +90,7 @@ class PostPurchaseCalculatorTest extends TestCase
 
     public function testCalculateOrderWithoutShippingTaxHasNoTax(): void
     {
-        $order = $this->mockFactory->create(Order::class);
+        $order = $this->createStub(Order::class);
         $order->method('getBaseShippingInclTax')
             ->willReturn(10.0);
         $order->method('getBaseShippingTaxAmount')
@@ -91,7 +102,7 @@ class PostPurchaseCalculatorTest extends TestCase
 
     public function testCalculateTakesTaxRateOfTheOrderFromShippingCalculator(): void
     {
-        $this->dependencyMocks['calculator']->expects(static::once())
+        $this->shippingCalculator->expects(static::once())
             ->method('getTaxRateByOrder')
             ->with($this->order);
 
@@ -127,13 +138,12 @@ class PostPurchaseCalculatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->calculator = parent::setUpMocks(PostPurchaseCalculator::class);
+        $this->shippingCalculator = $this->createMock(ShippingCalculator::class);
+        $this->dataConverter = $this->createStub(DataConverter::class);
+        $this->calculator = new PostPurchaseCalculator($this->dataConverter, $this->shippingCalculator);
 
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->order = $this->mockFactory->create(Order::class);
-
-        $address = $this->mockFactory->create(Address::class);
-        $this->dataHolder->setShippingAddress($address);
+        $this->dataHolder = $this->createStub(DataHolder::class);
+        $this->order = $this->createStub(Order::class);
 
         $this->dataHolder->method('getBaseShippingInclTax')
             ->willReturn(12.5);
@@ -148,10 +158,10 @@ class PostPurchaseCalculatorTest extends TestCase
             ->willReturn(30.0);
         $this->order->method('getShippingDescription')
             ->willReturn('my_shipping_description');
-        $this->dependencyMocks['calculator']
+        $this->shippingCalculator
             ->method('getTaxRateByOrder')
             ->willReturn(25.0);
-        $this->dependencyMocks['dataConverter']
+        $this->dataConverter
             ->method('toApiFloat')
             ->willReturnCallback(fn($float) => (int) round($float * 100));
     }
@@ -164,7 +174,7 @@ class PostPurchaseCalculatorTest extends TestCase
      */
     private function createDataHolder(float $shippingInclTax): DataHolder
     {
-        $dataHolder = $this->mockFactory->create(DataHolder::class);
+        $dataHolder = $this->createStub(DataHolder::class);
         $dataHolder->method('getBaseShippingInclTax')
             ->willReturn($shippingInclTax);
 

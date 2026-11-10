@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -9,19 +9,32 @@ declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Shipping;
 
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
+use Klarna\Orderlines\Model\ItemGenerator;
 use Klarna\Orderlines\Model\Items\Shipping\Handler;
+use Klarna\Orderlines\Model\Items\Shipping\Processor;
+use Klarna\Orderlines\Model\Items\Shipping\Validator;
 use Magento\Sales\Model\Order;
 use Magento\Quote\Model\Quote;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class HandlerTest extends TestCase
 {
     /**
      * @var Handler
      */
     private Handler $handler;
+    /**
+     * @var Validator
+     */
+    private Validator $validator;
+    /**
+     * @var Processor
+     */
+    private Processor $processor;
     /**
      * @var DataHolder
      */
@@ -41,9 +54,9 @@ class HandlerTest extends TestCase
 
     public function testCollectPrePurchaseNotCollectableImpliesNotProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectableForPrePurchase')
+        $this->validator->method('isCollectableForPrePurchase')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects($this->never())
+        $this->processor->expects($this->never())
             ->method('processPrePurchase');
 
         $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->quote);
@@ -51,9 +64,9 @@ class HandlerTest extends TestCase
 
     public function testCollectPrePurchaseCollectableImpliesProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectableForPrePurchase')
+        $this->validator->method('isCollectableForPrePurchase')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects($this->once())
+        $this->processor->expects($this->once())
             ->method('processPrePurchase');
 
         $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->quote);
@@ -61,9 +74,9 @@ class HandlerTest extends TestCase
 
     public function testCollectPostPurchaseNotCollectableImpliesNotProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectableForPostPurchase')
+        $this->validator->method('isCollectableForPostPurchase')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects($this->never())
+        $this->processor->expects($this->never())
             ->method('processPostPurchase');
 
         $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->order);
@@ -71,9 +84,9 @@ class HandlerTest extends TestCase
 
     public function testCollectPostPurchaseCollectableImpliesProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectableForPostPurchase')
+        $this->validator->method('isCollectableForPostPurchase')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects($this->once())
+        $this->processor->expects($this->once())
             ->method('processPostPurchase');
 
         $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->order);
@@ -81,7 +94,7 @@ class HandlerTest extends TestCase
 
     public function testFetchNotFetchableImpliesNotProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator->method('isFetchable')
             ->willReturn(false);
         $this->parameter->expects($this->never())
             ->method('addOrderLine');
@@ -91,7 +104,7 @@ class HandlerTest extends TestCase
 
     public function testFetchFetchableImpliesProcessingData(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator->method('isFetchable')
             ->willReturn(true);
         $this->parameter->expects($this->once())
             ->method('addOrderLine');
@@ -101,12 +114,14 @@ class HandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->handler = parent::setUpMocks(Handler::class);
+        $this->validator = $this->createStub(Validator::class);
+        $this->processor = $this->createMock(Processor::class);
+        $this->handler = new Handler($this->createStub(ItemGenerator::class), $this->validator, $this->processor);
 
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
+        $this->parameter = $this->createMock(Parameter::class);
 
-        $this->quote = $this->mockFactory->create(Quote::class);
-        $this->order = $this->mockFactory->create(Order::class);
+        $this->quote = $this->createStub(Quote::class);
+        $this->order = $this->createStub(Order::class);
     }
 }

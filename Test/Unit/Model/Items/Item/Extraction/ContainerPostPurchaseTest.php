@@ -10,12 +10,14 @@ declare(strict_types=1);
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction;
 
 use Klarna\Base\Helper\DataConverter;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\BaseResult;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\ExclusiveTaxCalculator;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\InclusiveTaxCalculator;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Container;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\Product\Configuration\Item\ItemResolverInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\TestCase;
 use Magento\Sales\Model\Order\Item as OrderItem;
 use Magento\Store\Model\Store;
 use Magento\Tax\Model\Config as TaxConfig;
@@ -25,6 +27,7 @@ use Magento\Tax\Model\Config as TaxConfig;
  *
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\Container
  */
+#[AllowMockObjectsWithoutExpectations]
 class ContainerPostPurchaseTest extends TestCase
 {
     /**
@@ -143,7 +146,7 @@ class ContainerPostPurchaseTest extends TestCase
         ]);
         $this->model->setValues($item, $this->store);
 
-        $baseResult = $this->mockFactory->create(BaseResult::class);
+        $baseResult = $this->createStub(BaseResult::class);
         $baseResult->method('getFromContainer')
             ->willReturn(['quantity' => $this->model->getQty()]);
         $orderLine = (new ExclusiveTaxCalculator($baseResult, $this->createDataConverter()))
@@ -161,10 +164,10 @@ class ContainerPostPurchaseTest extends TestCase
      */
     private function createInclusiveTaxCalculator(bool $applyTaxAfterDiscount): InclusiveTaxCalculator
     {
-        $baseResult = $this->mockFactory->create(BaseResult::class);
+        $baseResult = $this->createStub(BaseResult::class);
         $baseResult->method('getFromContainer')
             ->willReturn(['quantity' => $this->model->getQty()]);
-        $taxConfig = $this->mockFactory->create(TaxConfig::class);
+        $taxConfig = $this->createStub(TaxConfig::class);
         $taxConfig->method('applyTaxAfterDiscount')
             ->willReturn($applyTaxAfterDiscount);
 
@@ -178,7 +181,7 @@ class ContainerPostPurchaseTest extends TestCase
      */
     private function createDataConverter(): DataConverter
     {
-        $dataConverter = $this->mockFactory->create(DataConverter::class);
+        $dataConverter = $this->createStub(DataConverter::class);
         $dataConverter->method('toApiFloat')
             ->willReturnCallback(fn($float) => (int) round($float * 100));
 
@@ -206,7 +209,10 @@ class ContainerPostPurchaseTest extends TestCase
      */
     private function createOrderItem(array $documentItemData): OrderItem
     {
-        $item = $this->mockFactory->create(OrderItem::class, ['getProduct']);
+        $item = $this->getMockBuilder(OrderItem::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getProduct'])
+            ->getMock();
         $item->method('getProduct')
             ->willReturn($this->product);
         $item->setData(array_merge(
@@ -229,8 +235,8 @@ class ContainerPostPurchaseTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Container::class);
-        $this->store = $this->mockFactory->create(Store::class);
-        $this->product = $this->mockFactory->create(Product::class);
+        $this->model = new Container($this->createStub(ItemResolverInterface::class));
+        $this->store = $this->createStub(Store::class);
+        $this->product = $this->createStub(Product::class);
     }
 }

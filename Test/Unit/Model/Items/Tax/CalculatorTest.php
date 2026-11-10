@@ -1,27 +1,26 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Tax;
 
+use Klarna\Base\Helper\DataConverter;
 use Klarna\Orderlines\Model\Container\DataHolder;
+use Klarna\Orderlines\Model\Fpt\Validator;
 use Klarna\Orderlines\Model\Items\Tax\Calculator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Store\Model\Store;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Tax\Calculator
  */
 class CalculatorTest extends TestCase
 {
-    /**
-     * @var Calculator
-     */
-    private Calculator $calculator;
     /**
      * @var DataHolder
      */
@@ -31,50 +30,54 @@ class CalculatorTest extends TestCase
     {
         $this->dataHolder->method('getTotalTax')
             ->willReturn(0);
-        $this->dependencyMocks['validator']->method('isFptUsable')
+        $validator = $this->createStub(Validator::class);
+        $validator->method('isFptUsable')
             ->willReturn(false);
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $dataConverter = $this->createMock(DataConverter::class);
+        $dataConverter->method('toApiFloat')
             ->with(0)
             ->willReturn(0);
-        $this->calculator->calculate($this->dataHolder);
+        $calculator = new Calculator($dataConverter, $validator);
 
-        static::assertEquals(0, $this->calculator->getUnitPrice());
-        static::assertEquals(0, $this->calculator->getTotalAmount());
-        static::assertEquals(0, $this->calculator->getTaxRate());
-        static::assertEquals(0, $this->calculator->getTaxAmount());
-        static::assertEquals('', $this->calculator->getTitle());
-        static::assertEquals('', $this->calculator->getReference());
+        $calculator->calculate($this->dataHolder);
+
+        static::assertEquals(0, $calculator->getUnitPrice());
+        static::assertEquals(0, $calculator->getTotalAmount());
+        static::assertEquals(0, $calculator->getTaxRate());
+        static::assertEquals(0, $calculator->getTaxAmount());
+        static::assertEquals('', $calculator->getTitle());
+        static::assertEquals('', $calculator->getReference());
     }
 
     public function testCalculateFptUsed(): void
     {
         $this->dataHolder->method('getTotalTax')
             ->willReturn(0);
-        $this->dependencyMocks['validator']->method('isFptUsable')
-            ->willReturn(true);
         $this->dataHolder->method('getFptTax')
             ->willReturn(['tax' => 2]);
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $validator = $this->createStub(Validator::class);
+        $validator->method('isFptUsable')
+            ->willReturn(true);
+        $dataConverter = $this->createMock(DataConverter::class);
+        $dataConverter->method('toApiFloat')
             ->with(2)
             ->willReturn(5);
-        $this->calculator->calculate($this->dataHolder);
+        $calculator = new Calculator($dataConverter, $validator);
 
-        static::assertEquals(5, $this->calculator->getUnitPrice());
-        static::assertEquals(0, $this->calculator->getTotalAmount());
-        static::assertEquals(0, $this->calculator->getTaxRate());
-        static::assertEquals(5, $this->calculator->getTaxAmount());
-        static::assertEquals('', $this->calculator->getTitle());
-        static::assertEquals('', $this->calculator->getReference());
+        $calculator->calculate($this->dataHolder);
+
+        static::assertEquals(5, $calculator->getUnitPrice());
+        static::assertEquals(0, $calculator->getTotalAmount());
+        static::assertEquals(0, $calculator->getTaxRate());
+        static::assertEquals(5, $calculator->getTaxAmount());
+        static::assertEquals('', $calculator->getTitle());
+        static::assertEquals('', $calculator->getReference());
     }
 
     protected function setUp(): void
     {
-        $this->calculator = parent::setUpMocks(Calculator::class);
-
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-
-        $store = $this->mockFactory->create(Store::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
         $this->dataHolder->method('getStore')
-            ->willReturn($store);
+            ->willReturn($this->createStub(Store::class));
     }
 }

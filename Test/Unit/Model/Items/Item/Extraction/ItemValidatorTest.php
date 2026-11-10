@@ -1,19 +1,20 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction;
 
 use Klarna\Orderlines\Model\Items\Item\Extraction\ItemValidator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Quote\Model\Quote\Item;
-use Magento\Catalog\Model\Product;
+use Magento\Framework\DataObject;
 use Magento\Catalog\Model\Product\Type;
 use Magento\Bundle\Model\Product\Price;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\ItemValidator
@@ -29,16 +30,15 @@ class ItemValidatorTest extends TestCase
      */
     private Item $magentoQuoteItem;
     /**
-     * @var Product
+     * @var DataObject
      */
-    private Product $product;
+    private DataObject $product;
 
     public function testIsBundledProductWithDynamicPriceTypeNotBundledAndNotDynamicImpliesReturningFalse(): void
     {
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn('simple');
-        $this->product->method('getPriceType')
-            ->willReturn('fixed');
+        $this->product->setData('price_type', 'fixed');
 
         static::assertFalse($this->model->isBundledProductWithDynamicPriceType($this->magentoQuoteItem));
     }
@@ -47,8 +47,7 @@ class ItemValidatorTest extends TestCase
     {
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn('fixed');
+        $this->product->setData('price_type', 'fixed');
 
         static::assertFalse($this->model->isBundledProductWithDynamicPriceType($this->magentoQuoteItem));
     }
@@ -57,8 +56,7 @@ class ItemValidatorTest extends TestCase
     {
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn('simple');
-        $this->product->method('getPriceType')
-            ->willReturn(Price::PRICE_TYPE_DYNAMIC);
+        $this->product->setData('price_type', Price::PRICE_TYPE_DYNAMIC);
 
         static::assertFalse($this->model->isBundledProductWithDynamicPriceType($this->magentoQuoteItem));
     }
@@ -67,8 +65,7 @@ class ItemValidatorTest extends TestCase
     {
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn((string) Price::PRICE_TYPE_DYNAMIC);
+        $this->product->setData('price_type', (string) Price::PRICE_TYPE_DYNAMIC);
 
         static::assertTrue($this->model->isBundledProductWithDynamicPriceType($this->magentoQuoteItem));
     }
@@ -77,8 +74,7 @@ class ItemValidatorTest extends TestCase
     {
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn(0);
+        $this->product->setData('price_type', 0);
 
         static::assertTrue($this->model->isBundledProductWithDynamicPriceType($this->magentoQuoteItem));
     }
@@ -94,8 +90,7 @@ class ItemValidatorTest extends TestCase
             ->willReturn($this->magentoQuoteItem);
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn('simple');
-        $this->product->method('getPriceType')
-            ->willReturn('dynamic');
+        $this->product->setData('price_type', 'dynamic');
 
         static::assertTrue($this->model->hasInvalidParentProduct($this->magentoQuoteItem));
     }
@@ -106,8 +101,7 @@ class ItemValidatorTest extends TestCase
             ->willReturn($this->magentoQuoteItem);
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn('dynamic');
+        $this->product->setData('price_type', 'dynamic');
 
         static::assertFalse($this->model->hasInvalidParentProduct($this->magentoQuoteItem));
     }
@@ -118,8 +112,7 @@ class ItemValidatorTest extends TestCase
             ->willReturn($this->magentoQuoteItem);
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn('simple');
-        $this->product->method('getPriceType')
-            ->willReturn(Price::PRICE_TYPE_FIXED);
+        $this->product->setData('price_type', Price::PRICE_TYPE_FIXED);
 
         static::assertTrue($this->model->hasInvalidParentProduct($this->magentoQuoteItem));
     }
@@ -130,8 +123,7 @@ class ItemValidatorTest extends TestCase
             ->willReturn($this->magentoQuoteItem);
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn((string) Price::PRICE_TYPE_FIXED);
+        $this->product->setData('price_type', (string) Price::PRICE_TYPE_FIXED);
 
         static::assertTrue($this->model->hasInvalidParentProduct($this->magentoQuoteItem));
     }
@@ -142,18 +134,19 @@ class ItemValidatorTest extends TestCase
             ->willReturn($this->magentoQuoteItem);
         $this->magentoQuoteItem->method('getProductType')
             ->willReturn(Type::TYPE_BUNDLE);
-        $this->product->method('getPriceType')
-            ->willReturn(1);
+        $this->product->setData('price_type', 1);
 
         static::assertTrue($this->model->hasInvalidParentProduct($this->magentoQuoteItem));
     }
-    
+
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(ItemValidator::class);
+        $this->model = new ItemValidator();
 
-        $this->product = $this->mockFactory->create(Product::class, [], ['getPriceType']);
-        $this->magentoQuoteItem = $this->mockFactory->create(Item::class);
+        // getPriceType() is a magic getter: a real DataObject answers it from its data
+        $this->product = new DataObject();
+
+        $this->magentoQuoteItem = $this->createStub(Item::class);
         $this->magentoQuoteItem->method('getProduct')
             ->willReturn($this->product);
     }

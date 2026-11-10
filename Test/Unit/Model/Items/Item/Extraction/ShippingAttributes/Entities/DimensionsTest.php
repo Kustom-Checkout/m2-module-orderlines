@@ -1,17 +1,19 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction\ShippingAttributes\Entities;
 
+use Klarna\AdminSettings\Model\Configurations\ShippingOptions;
 use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Dimensions;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Catalog\Model\Product;
 use Magento\Store\Model\Store;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Dimensions
@@ -23,13 +25,17 @@ class DimensionsTest extends TestCase
      */
     private Dimensions $model;
     /**
+     * @var ShippingOptions
+     */
+    private ShippingOptions $shippingOptions;
+    /**
      * @var Product
      */
     private Product $product;
 
     public function testGetUnitIsCmButNoValueImpliesReturningZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('cm');
 
         $result = $this->model->get($this->product);
@@ -40,13 +46,13 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsCmAndHaveValuesImpliesReturningNonZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('cm');
-        $this->dependencyMocks['shippingOptions']->method('getProductHeightAttribute')
+        $this->shippingOptions->method('getProductHeightAttribute')
             ->willReturn('height');
-        $this->dependencyMocks['shippingOptions']->method('getProductWidthAttribute')
+        $this->shippingOptions->method('getProductWidthAttribute')
             ->willReturn('width');
-        $this->dependencyMocks['shippingOptions']->method('getProductLengthAttribute')
+        $this->shippingOptions->method('getProductLengthAttribute')
             ->willReturn('length');
 
         $this->product->method('getData')
@@ -64,7 +70,7 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsInchButNoValueImpliesReturningZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('inch');
 
         $result = $this->model->get($this->product);
@@ -75,13 +81,13 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsInchAndHaveValuesImpliesReturningNonZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('inch');
-        $this->dependencyMocks['shippingOptions']->method('getProductHeightAttribute')
+        $this->shippingOptions->method('getProductHeightAttribute')
             ->willReturn('height');
-        $this->dependencyMocks['shippingOptions']->method('getProductWidthAttribute')
+        $this->shippingOptions->method('getProductWidthAttribute')
             ->willReturn('width');
-        $this->dependencyMocks['shippingOptions']->method('getProductLengthAttribute')
+        $this->shippingOptions->method('getProductLengthAttribute')
             ->willReturn('length');
 
         $this->product->method('getData')
@@ -99,7 +105,7 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsMmButNoValueImpliesReturningZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('mm');
 
         $result = $this->model->get($this->product);
@@ -110,13 +116,13 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsMmAndHaveValuesImpliesReturningNonZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('mm');
-        $this->dependencyMocks['shippingOptions']->method('getProductHeightAttribute')
+        $this->shippingOptions->method('getProductHeightAttribute')
             ->willReturn('height');
-        $this->dependencyMocks['shippingOptions']->method('getProductWidthAttribute')
+        $this->shippingOptions->method('getProductWidthAttribute')
             ->willReturn('width');
-        $this->dependencyMocks['shippingOptions']->method('getProductLengthAttribute')
+        $this->shippingOptions->method('getProductLengthAttribute')
             ->willReturn('length');
 
         $this->product->method('getData')
@@ -134,7 +140,7 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsUnknownButNoValueImpliesReturningZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('__');
 
         $result = $this->model->get($this->product);
@@ -145,13 +151,13 @@ class DimensionsTest extends TestCase
 
     public function testGetUnitIsUnknownAndHaveValuesImpliesReturningNonZeroValueForAllDimensions(): void
     {
-        $this->dependencyMocks['shippingOptions']->method('getProductSizeUnit')
+        $this->shippingOptions->method('getProductSizeUnit')
             ->willReturn('__');
-        $this->dependencyMocks['shippingOptions']->method('getProductHeightAttribute')
+        $this->shippingOptions->method('getProductHeightAttribute')
             ->willReturn('height');
-        $this->dependencyMocks['shippingOptions']->method('getProductWidthAttribute')
+        $this->shippingOptions->method('getProductWidthAttribute')
             ->willReturn('width');
-        $this->dependencyMocks['shippingOptions']->method('getProductLengthAttribute')
+        $this->shippingOptions->method('getProductLengthAttribute')
             ->willReturn('length');
 
         $this->product->method('getData')
@@ -169,10 +175,11 @@ class DimensionsTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Dimensions::class);
+        $this->shippingOptions = $this->createStub(ShippingOptions::class);
+        $this->model = new Dimensions($this->shippingOptions);
 
-        $store = $this->mockFactory->create(Store::class);
-        $this->product = $this->mockFactory->create(Product::class);
+        $store = $this->createStub(Store::class);
+        $this->product = $this->createStub(Product::class);
         $this->product->method('getStore')
             ->willReturn($store);
     }

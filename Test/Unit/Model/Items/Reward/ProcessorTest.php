@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -11,8 +11,9 @@ namespace Klarna\Orderlines\Test\Unit\Model\Items\Reward;
 
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
+use Klarna\Orderlines\Model\Items\Reward\Calculator;
 use Klarna\Orderlines\Model\Items\Reward\Processor;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Reward\Processor
@@ -20,95 +21,96 @@ use Klarna\Base\Test\Unit\Mock\TestCase;
 class ProcessorTest extends TestCase
 {
     /**
-     * @var Processor
-     */
-    private Processor $processor;
-    /**
      * @var DataHolder
      */
     private DataHolder $dataHolder;
-    /**
-     * @var Parameter
-     */
-    private Parameter $parameter;
 
     public function testProcessSettingRewardUnitPrice(): void
     {
-        $expected = 100;
-        $this->dependencyMocks['calculator']->method('getUnitPrice')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 100;
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getUnitPrice')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardUnitPrice')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     public function testProcessSettingRewardTaxRate(): void
     {
-        $expected = 100;
-        $this->dependencyMocks['calculator']->method('getTaxRate')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 100;
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getTaxRate')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardTaxRate')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     public function testProcessSettingRewardTotalAmount(): void
     {
-        $expected = 100;
-        $this->dependencyMocks['calculator']->method('getTotalAmount')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 100;
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getTotalAmount')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardTotalAmount')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     public function testProcessSettingRewardTaxAmount(): void
     {
-        $expected = 100;
-        $this->dependencyMocks['calculator']->method('getTaxAmount')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 100;
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getTaxAmount')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardTaxAmount')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     public function testProcessSettingRewardTitle(): void
     {
-        $expected = 'abc';
-        $this->dependencyMocks['calculator']->method('getTitle')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 'abc';
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getTitle')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardTitle')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     public function testProcessSettingRewardReference(): void
     {
-        $expected = 'abc';
-        $this->dependencyMocks['calculator']->method('getReference')
-            ->willReturn($expected);
-        $this->parameter->expects(static::once())
+        $value = 'abc';
+        $calculator = $this->createStub(Calculator::class);
+        $calculator->method('getReference')
+            ->willReturn($value);
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('setRewardReference')
-            ->with($expected);
+            ->with($value);
 
-        $this->processor->process($this->dataHolder, $this->parameter);
+        (new Processor($calculator))->process($this->dataHolder, $parameter);
     }
 
     protected function setUp(): void
     {
-        $this->processor = parent::setUpMocks(Processor::class);
-
-        $this->parameter = $this->mockFactory->create(Parameter::class);
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
     }
 }

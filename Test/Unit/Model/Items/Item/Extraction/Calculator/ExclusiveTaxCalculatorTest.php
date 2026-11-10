@@ -1,16 +1,20 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction;
 
+use Klarna\Base\Helper\DataConverter;
+use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\BaseResult;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\ExclusiveTaxCalculator;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Container;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\ExclusiveTaxCalculator
@@ -18,11 +22,15 @@ use Klarna\Base\Test\Unit\Mock\TestCase;
 class ExclusiveTaxCalculatorTest extends TestCase
 {
     /**
-     * @var ExclusiveTaxCalculator 
+     * @var ExclusiveTaxCalculator
      */
     private ExclusiveTaxCalculator $model;
     /**
-     * @var Container 
+     * @var DataConverter|MockObject
+     */
+    private DataConverter $dataConverter;
+    /**
+     * @var Container
      */
     private Container $container;
 
@@ -32,13 +40,12 @@ class ExclusiveTaxCalculatorTest extends TestCase
             ->willReturn((float) 50);
         $this->container->method('getDiscountAmount')
             ->willReturn((float) 10);
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $this->dataConverter->method('toApiFloat')
             ->willReturnCallback(fn($float) =>
-                match($float) {
+                match ($float) {
                     (float) 50 => (float) 50,
                     (float) 40 => 40
-                }
-            );
+                });
 
         $result = $this->model->getOrderLineItem($this->container);
         static::assertEquals(50, $result['unit_price']);
@@ -50,13 +57,12 @@ class ExclusiveTaxCalculatorTest extends TestCase
             ->willReturn((float) 50);
         $this->container->method('getDiscountAmount')
             ->willReturn((float) 10);
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $this->dataConverter->method('toApiFloat')
             ->willReturnCallback(fn($float) =>
-                match($float) {
+                match ($float) {
                     (float) 50 => (float) 50,
                     (float) 40 => 40
-                }
-            );
+                });
 
         $result = $this->model->getOrderLineItem($this->container);
         static::assertEquals(40, $result['total_amount']);
@@ -64,10 +70,11 @@ class ExclusiveTaxCalculatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(ExclusiveTaxCalculator::class);
-        $this->container = $this->mockFactory->create(Container::class);
-
-        $this->dependencyMocks['baseResult']->method('getFromContainer')
+        $baseResult = $this->createStub(BaseResult::class);
+        $baseResult->method('getFromContainer')
             ->willReturn(['quantity' => 1]);
+        $this->dataConverter = $this->createStub(DataConverter::class);
+        $this->model = new ExclusiveTaxCalculator($baseResult, $this->dataConverter);
+        $this->container = $this->createStub(Container::class);
     }
 }

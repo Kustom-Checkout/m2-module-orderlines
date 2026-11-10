@@ -1,18 +1,19 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction\ShippingAttributes\Entities;
 
 use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Tags;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Catalog\Model\Product;
-use Magento\Framework\Data\Collection;
+use Magento\Catalog\Model\ResourceModel\Category\Collection;
 use Magento\Framework\DataObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Tags
@@ -38,6 +39,9 @@ class TagsTest extends TestCase
 
     public function testGetProductCollectionIsNullImpliesReturningEmptyArray(): void
     {
+        $this->product->method('getCategoryCollection')
+            ->willReturn(null);
+
         static::assertEquals([], $this->model->get($this->product));
     }
 
@@ -53,8 +57,7 @@ class TagsTest extends TestCase
     public function testGetCollectionHasItemsImpliesReturningArrayWithItems(): void
     {
         $expected = 'my_item_name';
-        $this->item->method('getName')
-            ->willReturn($expected);
+        $this->item->setData('name', $expected);
         $this->collection->method('getItems')
             ->willReturn([$this->item]);
         $this->product->method('getCategoryCollection')
@@ -65,10 +68,10 @@ class TagsTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Tags::class);
+        $this->model = new Tags();
 
-        $this->product = $this->mockFactory->create(Product::class);
-        $this->collection = $this->mockFactory->create(Collection::class, ['getItems'],['addNameToResult']);
-        $this->item = $this->mockFactory->create(DataObject::class, [], ['getName']);
+        $this->product = $this->createStub(Product::class);
+        $this->collection = $this->createStub(Collection::class);
+        $this->item = new DataObject();
     }
 }

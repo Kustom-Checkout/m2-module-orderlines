@@ -1,16 +1,18 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction\ShippingAttributes\Entities;
 
 use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Weight;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Weight
@@ -22,13 +24,17 @@ class WeightTest extends TestCase
      */
     private Weight $model;
     /**
+     * @var ScopeConfigInterface
+     */
+    private ScopeConfigInterface $scopeConfig;
+    /**
      * @var Product
      */
     private Product $product;
 
     public function testGetUnitIsLbsAndProductWeightIsZeroReturningValueZero(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('lbs');
 
         static::assertEquals(0, $this->model->get($this->product));
@@ -36,7 +42,7 @@ class WeightTest extends TestCase
 
     public function testGetUnitIsLbsAndProductWeightIsNotZeroReturningValueOfNotZero(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('lbs');
         $this->product->method('getWeight')
             ->willReturn(12);
@@ -46,7 +52,7 @@ class WeightTest extends TestCase
 
     public function testGetUnitIsUnknownAndProductWeightIsZeroReturningValueZero(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('__');
 
         static::assertEquals(0, $this->model->get($this->product));
@@ -54,7 +60,7 @@ class WeightTest extends TestCase
 
     public function testGetUnitIsUnknownAndProductWeightIsNotZeroReturningValueOfNotZero(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('__');
         $this->product->method('getWeight')
             ->willReturn(12);
@@ -64,7 +70,8 @@ class WeightTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Weight::class);
-        $this->product = $this->mockFactory->create(Product::class);
+        $this->scopeConfig = $this->createStub(ScopeConfigInterface::class);
+        $this->model = new Weight($this->scopeConfig);
+        $this->product = $this->createStub(Product::class);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -12,13 +12,17 @@ namespace Klarna\Orderlines\Test\Unit\Model\Items\Reward;
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
 use Klarna\Orderlines\Model\Items\Reward\Validator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Reward\Validator
  */
 class ValidatorTest extends TestCase
 {
+    /**
+     * @var Validator
+     */
+    private Validator $validator;
     /**
      * @var DataHolder
      */
@@ -27,13 +31,12 @@ class ValidatorTest extends TestCase
      * @var Parameter
      */
     private Parameter $parameter;
-    /**
-     * @var Validator
-     */
-    private Validator $validator;
 
     public function testIsCollectableRewardKeyIsNotSetImpliesResultFalse(): void
     {
+        $this->dataHolder->method('getTotals')
+            ->willReturn([]);
+
         static::assertFalse($this->validator->isCollectable($this->dataHolder));
     }
 
@@ -49,6 +52,7 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getRewardTotalAmount')
             ->willReturn(-1);
+
         static::assertFalse($this->validator->isFetchable($this->parameter));
     }
 
@@ -56,6 +60,7 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getRewardTotalAmount')
             ->willReturn(0);
+
         static::assertFalse($this->validator->isFetchable($this->parameter));
     }
 
@@ -63,14 +68,14 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getRewardTotalAmount')
             ->willReturn(1);
+
         static::assertTrue($this->validator->isFetchable($this->parameter));
     }
 
     protected function setUp(): void
     {
-        $this->validator = parent::setUpMocks(Validator::class);
-
-        $this->parameter = $this->mockFactory->create(Parameter::class);
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
+        $this->validator = new Validator();
+        $this->dataHolder = $this->createStub(DataHolder::class);
+        $this->parameter = $this->createStub(Parameter::class);
     }
 }

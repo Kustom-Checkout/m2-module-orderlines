@@ -1,16 +1,18 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Tax;
 
+use Klarna\Base\Model\Quote\Address\Country;
 use Klarna\Orderlines\Model\Items\Tax\Validator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Quote\Model\Quote;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Tax\Validator
@@ -18,47 +20,54 @@ use Magento\Quote\Model\Quote;
 class ValidatorTest extends TestCase
 {
     /**
-     * @var Validator
-     */
-    private Validator $validator;
-    /**
      * @var Quote
      */
-    private Quote $magentoQuote;
+    private Quote $quote;
 
     public function testIsCollectableConfigurationReturnsTrue(): void
     {
-        $this->dependencyMocks['country']->method('isUsCountry')
+        $country = $this->createStub(Country::class);
+        $country->method('isUsCountry')
             ->willReturn(true);
-        static::assertTrue($this->validator->isCollectable($this->magentoQuote));
+        $validator = new Validator($country);
+
+        static::assertTrue($validator->isCollectable($this->quote));
     }
 
     public function testIsCollectableConfigurationReturnsFalse(): void
     {
-        $this->dependencyMocks['country']->method('isUsCountry')
+        $country = $this->createStub(Country::class);
+        $country->method('isUsCountry')
             ->willReturn(false);
-        static::assertFalse($this->validator->isCollectable($this->magentoQuote));
+        $validator = new Validator($country);
+
+        static::assertFalse($validator->isCollectable($this->quote));
     }
 
     public function testIsFetchableConfigurationReturnsTrue(): void
     {
-        $this->dependencyMocks['country']->method('isUsCountry')
+        $country = $this->createStub(Country::class);
+        $country->method('isUsCountry')
             ->willReturn(true);
-        $this->validator->isCollectable($this->magentoQuote);
-        static::assertTrue($this->validator->isFetchable());
+        $validator = new Validator($country);
+        $validator->isCollectable($this->quote);
+
+        static::assertTrue($validator->isFetchable());
     }
 
     public function testIsFetchableConfigurationReturnsFalse(): void
     {
-        $this->dependencyMocks['country']->method('isUsCountry')
+        $country = $this->createStub(Country::class);
+        $country->method('isUsCountry')
             ->willReturn(false);
-        $this->validator->isCollectable($this->magentoQuote);
-        static::assertFalse($this->validator->isFetchable());
+        $validator = new Validator($country);
+        $validator->isCollectable($this->quote);
+
+        static::assertFalse($validator->isFetchable());
     }
 
     protected function setUp(): void
     {
-        $this->validator = parent::setUpMocks(Validator::class);
-        $this->magentoQuote = $this->mockFactory->create(Quote::class);
+        $this->quote = $this->createStub(Quote::class);
     }
 }
