@@ -11,9 +11,8 @@ namespace Klarna\Orderlines\Model\Items\Shipping;
 
 use Klarna\Base\Helper\DataConverter;
 use Klarna\Orderlines\Model\Container\DataHolder;
+use Klarna\Orderlines\Model\Calculator\Shipping as ShippingCalculator;
 use Magento\Sales\Api\Data\OrderInterface;
-use Magento\Tax\Api\OrderTaxManagementInterface;
-use Magento\Tax\Model\Sales\Total\Quote\CommonTaxCollector;
 
 /**
  * @internal
@@ -21,19 +20,21 @@ use Magento\Tax\Model\Sales\Total\Quote\CommonTaxCollector;
 class PostPurchaseCalculator extends CalculatorAbstract
 {
     /**
-     * @var OrderTaxManagementInterface
+     * @var ShippingCalculator
      */
-    private OrderTaxManagementInterface $orderTaxManagement;
+    private ShippingCalculator $calculator;
 
     /**
      * @param DataConverter $dataConverter
-     * @param OrderTaxManagementInterface $orderTaxManagement
+     * @param ShippingCalculator $calculator
      * @codeCoverageIgnore
      */
-    public function __construct(DataConverter $dataConverter, OrderTaxManagementInterface $orderTaxManagement)
-    {
+    public function __construct(
+        DataConverter $dataConverter,
+        ShippingCalculator $calculator
+    ) {
         parent::__construct($dataConverter);
-        $this->orderTaxManagement = $orderTaxManagement;
+        $this->calculator = $calculator;
     }
 
     /**
@@ -65,10 +66,7 @@ class PostPurchaseCalculator extends CalculatorAbstract
     }
 
     /**
-     * Getting back the shipping tax rate Magento applied to the order
-     *
-     * The order totals only serve as a fallback for orders without stored shipping tax rates, because a rate
-     * worked out from rounded amounts can be off (e.g. 25.06% instead of 25%).
+     * Getting back the shipping tax rate Magento applied to the order, or 0 when no shipping is billed
      *
      * @param float $unitPrice
      * @param OrderInterface $order
@@ -76,52 +74,11 @@ class PostPurchaseCalculator extends CalculatorAbstract
      */
     private function calculateTaxRate(float $unitPrice, OrderInterface $order): float
     {
-        $baseShippingAmount = (float) $order->getBaseShippingAmount();
-        $baseShippingTaxAmount = (float) $order->getBaseShippingTaxAmount();
-        if ($unitPrice <= 0 || $baseShippingAmount <= 0 || $baseShippingTaxAmount <= 0) {
+        if ($unitPrice <= 0) {
             return 0.0;
         }
 
-        $storedTaxRate = $this->getStoredShippingTaxRate($order);
-        if ($storedTaxRate !== null) {
-            return $storedTaxRate;
-        }
-
-        return round($baseShippingTaxAmount / $baseShippingAmount * 100, 2);
-    }
-
-    /**
-     * Getting back the shipping tax rate Magento stored when the order was placed (sales_order_tax_item)
-     *
-     * Magento stores one row per applied tax rate, with rates of a later priority already compounded, so the sum
-     * of the rows is the rate Magento applied to the shipping.
-     *
-     * @param OrderInterface $order
-     * @return float|null null when Magento has no shipping tax rate stored for the order
-     */
-    private function getStoredShippingTaxRate(OrderInterface $order): ?float
-    {
-        try {
-            $taxDetails = $this->orderTaxManagement->getOrderTaxDetails((int) $order->getEntityId());
-        } catch (\Exception $e) {
-            return null;
-        }
-        if ($taxDetails === null) {
-            return null;
-        }
-
-        $taxRate = null;
-        foreach ($taxDetails->getItems() ?? [] as $taxItem) {
-            if ($taxItem->getType() !== CommonTaxCollector::ITEM_TYPE_SHIPPING) {
-                continue;
-            }
-
-            foreach ($taxItem->getAppliedTaxes() ?? [] as $appliedTax) {
-                $taxRate = (float) $taxRate + (float) $appliedTax->getPercent();
-            }
-        }
-
-        return $taxRate > 0 ? $taxRate : null;
+        return $this->calculator->getTaxRateByOrder($order);
     }
 
     /**
