@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB (Originally developed by Klarna Bank AB)
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -179,6 +179,11 @@ class Container
      */
     public function setRowTotal(ExtensibleDataInterface $item): void
     {
+        if ($this->isInvoiceOrCreditMemoItem($item)) {
+            $this->rowTotal = (float) ($item->getCurrentInvoiceRefundItemBaseRowTotal() ?? 0);
+            return;
+        }
+
         $this->rowTotal = (float) ($item->getBaseRowTotal() ?? 0);
     }
 
@@ -199,6 +204,13 @@ class Container
      */
     public function setRowTotalIncludedTax(ExtensibleDataInterface $item): void
     {
+        if ($this->isInvoiceOrCreditMemoItem($item)) {
+            $this->rowTotalIncludedTax = (float) $item->getCurrentInvoiceRefundItemBaseRowTotal() +
+                (float) $item->getCurrentInvoiceRefundItemBaseTaxAmount() +
+                (float) $item->getCurrentInvoiceRefundItemBaseDiscountTaxCompensationAmount();
+            return;
+        }
+
         $this->rowTotalIncludedTax = (float) (
             $item->getBaseRowTotal() + $item->getBaseTaxAmount() + $item->getDiscountTaxCompensationAmount()
             ?? 0
@@ -222,6 +234,11 @@ class Container
      */
     public function setTaxAmount(ExtensibleDataInterface $item): void
     {
+        if ($this->isInvoiceOrCreditMemoItem($item)) {
+            $this->taxAmount = (float) ($item->getCurrentInvoiceRefundItemBaseTaxAmount() ?? 0);
+            return;
+        }
+
         $this->taxAmount = (float) ($item->getBaseTaxAmount() ?? 0);
     }
 
@@ -242,7 +259,25 @@ class Container
      */
     public function setDiscountAmount(ExtensibleDataInterface $item): void
     {
+        if ($this->isInvoiceOrCreditMemoItem($item)) {
+            $this->discountAmount = (float) ($item->getCurrentInvoiceRefundItemBaseDiscountAmount() ?? 0);
+            return;
+        }
+
         $this->discountAmount = (float) ($item->getBaseDiscountAmount() ?? 0);
+    }
+
+    /**
+     * Checking if the item is captured or refunded by an invoice or credit memo (the same condition as setQty())
+     *
+     * The invoice or credit memo can cover only part of the ordered quantity, so its own amounts must be used.
+     *
+     * @param ExtensibleDataInterface $item
+     * @return bool
+     */
+    private function isInvoiceOrCreditMemoItem(ExtensibleDataInterface $item): bool
+    {
+        return $item->getCurrentInvoiceRefundItemQty() > 0;
     }
 
     /**
