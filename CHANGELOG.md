@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.1-p2 / 2026-11-13
+
+### Fixes
+* KUSTOM-124: Fix integration test for Community 2.4.5, 2.4.6 and 2.4.7
+
 ## 3.1.1-p1 / 2026-11-10
 
 ### Breaking changes
