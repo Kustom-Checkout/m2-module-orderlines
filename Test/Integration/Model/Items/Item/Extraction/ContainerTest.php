@@ -1,44 +1,51 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
-namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction;
+namespace Klarna\Orderlines\Test\Integration\Model\Items\Item\Extraction;
 
 use Klarna\Orderlines\Model\Items\Item\Extraction\Container;
-use Klarna\Base\Test\Unit\Mock\TestCase;
-use Magento\Quote\Model\Quote\Item;
-use Magento\Store\Model\Store;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\UrlInterface;
+use Magento\Quote\Model\Quote\Item;
+use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Model\StoreManagerInterface;
+use Magento\TestFramework\Helper\Bootstrap;
+use PHPUnit\Framework\TestCase;
 
 /**
- * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\Container
+ * Extraction container filled from a real quote item, product and store
+ *
+ * @magentoDbIsolation enabled
+ * @magentoAppIsolation enabled
  */
 class ContainerTest extends TestCase
 {
     /**
      * @var Container
      */
-    private $model;
+    private Container $model;
     /**
      * @var Item
      */
-    private $item;
+    private Item $item;
     /**
      * @var Item
      */
-    private $parentItem;
+    private Item $parentItem;
     /**
-     * @var Store
+     * @var StoreInterface
      */
-    private $store;
+    private StoreInterface $store;
     /**
      * @var Product
      */
-    private $product;
+    private Product $product;
 
     public function testSetValuesOriginalPriceIsEmptyImpliesReturningOriginalPriceOfZero(): void
     {
@@ -49,8 +56,7 @@ class ContainerTest extends TestCase
     public function testSetValuesOriginalPriceIsNotEmptyImpliesReturningNotZeroOriginalPrice(): void
     {
         $expected = 123;
-        $this->item->method('getBaseOriginalPrice')
-            ->willReturn($expected);
+        $this->item->setData('base_original_price', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getOriginalPrice());
     }
@@ -64,8 +70,7 @@ class ContainerTest extends TestCase
     public function testSetValuesPriceIsNotEmptyImpliesReturningNotZeroPrice(): void
     {
         $expected = 123;
-        $this->item->method('getBasePrice')
-            ->willReturn($expected);
+        $this->item->setData('base_price', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getPrice());
     }
@@ -79,8 +84,7 @@ class ContainerTest extends TestCase
     public function testSetValuesBasePriceInclTaxIsNotEmptyImpliesReturningNotZeroPriceIncludedTax(): void
     {
         $expected = 123;
-        $this->item->method('getBasePriceInclTax')
-            ->willReturn($expected);
+        $this->item->setData('base_price_incl_tax', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getPriceIncludedTax());
     }
@@ -94,8 +98,7 @@ class ContainerTest extends TestCase
     public function testSetValuesBaseRowTotalIsNotEmptyImpliesReturningNotZeroRowTotal(): void
     {
         $expected = 123;
-        $this->item->method('getBaseRowTotal')
-            ->willReturn($expected);
+        $this->item->setData('base_row_total', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getRowTotal());
     }
@@ -108,12 +111,9 @@ class ContainerTest extends TestCase
 
     public function testSetValuesBaseRowTotalInclTaxIsNotEmptyImpliesReturningNotZeroRowTotalIncludedTax(): void
     {
-        $this->item->method('getBaseRowTotal')
-            ->willReturn(10);
-        $this->item->method('getBaseTaxAmount')
-            ->willReturn(11);
-        $this->item->method('getDiscountTaxCompensationAmount')
-            ->willReturn(12);
+        $this->item->setData('base_row_total', 10);
+        $this->item->setData('base_tax_amount', 11);
+        $this->item->setData('discount_tax_compensation_amount', 12);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals(33, $this->model->getRowTotalIncludedTax());
     }
@@ -127,8 +127,7 @@ class ContainerTest extends TestCase
     public function testSetValuesBaseTaxAmountIsNotEmptyImpliesReturningNotZeroTaxAmount(): void
     {
         $expected = 123;
-        $this->item->method('getBaseTaxAmount')
-            ->willReturn($expected);
+        $this->item->setData('base_tax_amount', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getTaxAmount());
     }
@@ -142,8 +141,7 @@ class ContainerTest extends TestCase
     public function testSetValuesBaseDiscountAmountIsNotEmptyImpliesReturningNotZeroDiscountAmount(): void
     {
         $expected = 123;
-        $this->item->method('getBaseDiscountAmount')
-            ->willReturn($expected);
+        $this->item->setData('base_discount_amount', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getDiscountAmount());
     }
@@ -151,8 +149,7 @@ class ContainerTest extends TestCase
     public function testSetValuesSettingTheNameAndReturningIt(): void
     {
         $expected = 'item_name';
-        $this->item->method('getName')
-            ->willReturn($expected);
+        $this->item->setData('name', $expected);
 
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getName());
@@ -161,12 +158,9 @@ class ContainerTest extends TestCase
     public function testSetValuesSettingTheQtyAndInvoiceRefundItemQtyIsGreaterZeroReturningInvoiceRefundItemQty(): void
     {
         $expected = 3;
-        $this->item->method('getCurrentInvoiceRefundItemQty')
-            ->willReturn($expected);
-        $this->item->method('getQty')
-            ->willReturn(2);
-        $this->item->method('getQtyOrdered')
-            ->willReturn(1);
+        $this->item->setData('current_invoice_refund_item_qty', $expected);
+        $this->item->setData('qty', 2);
+        $this->item->setData('qty_ordered', 1);
 
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getQty());
@@ -175,10 +169,8 @@ class ContainerTest extends TestCase
     public function testSetValuesSettingTheQtyAndInvoiceRefundItemQtyIsZeroAndQtyNotZeroReturningQty(): void
     {
         $expected = 2;
-        $this->item->method('getQty')
-            ->willReturn($expected);
-        $this->item->method('getQtyOrdered')
-            ->willReturn(1);
+        $this->item->setData('qty', $expected);
+        $this->item->setData('qty_ordered', 1);
 
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getQty());
@@ -187,8 +179,7 @@ class ContainerTest extends TestCase
     public function testSetValuesSettingTheQtyAndInvoiceRefundItemQtyIsZeroAndQtyIsZeroReturningQtyOrdered(): void
     {
         $expected = 1;
-        $this->item->method('getQtyOrdered')
-            ->willReturn($expected);
+        $this->item->setData('qty_ordered', $expected);
 
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getQty());
@@ -197,8 +188,7 @@ class ContainerTest extends TestCase
     public function testSetValuesSettingTheSkuAndReturningIt(): void
     {
         $expected = 'sku_id';
-        $this->item->method('getSku')
-            ->willReturn($expected);
+        $this->item->setData('sku', $expected);
 
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getSku());
@@ -213,8 +203,7 @@ class ContainerTest extends TestCase
     public function testSetValuesTaxPercentIsNotEmptyImpliesReturningNotZeroTaxPercent(): void
     {
         $expected = 123;
-        $this->item->method('getTaxPercent')
-            ->willReturn($expected);
+        $this->item->setData('tax_percent', $expected);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals($expected, $this->model->getTaxPercent());
     }
@@ -233,11 +222,10 @@ class ContainerTest extends TestCase
 
     public function testSetValuesSettingTheProductUrlAndReturningIt(): void
     {
-        $expected = 'product_url';
-        $this->product->method('getUrlInStore')
-            ->willReturn($expected);
+        $expected = $this->product->getUrlInStore();
 
         $this->model->setValues($this->item, $this->store);
+        static::assertNotEmpty($expected);
         static::assertEquals($expected, $this->model->getProductUrl());
     }
 
@@ -249,13 +237,13 @@ class ContainerTest extends TestCase
 
     public function testSetValuesSettingTheImageUrlAndProductHasImageImpliesImageUrlIsNotEmpty(): void
     {
-        $this->store->method('getBaseUrl')
-            ->willReturn('my_base_url/');
-        $this->product->method('getSmallImage')
-            ->willReturn('/my_image.jpg');
+        $this->product->setData('small_image', '/my_image.jpg');
 
         $this->model->setValues($this->item, $this->store);
-        static::assertEquals('my_base_url/catalog/product/my_image.jpg', $this->model->getImageUrl());
+        static::assertEquals(
+            $this->store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product/my_image.jpg',
+            $this->model->getImageUrl()
+        );
     }
 
     public function testSetValuesSettingStoreInstanceAndReturningIt(): void
@@ -264,64 +252,29 @@ class ContainerTest extends TestCase
         static::assertSame($this->store, $this->model->getStore());
     }
 
-    public function testSetValuesItemsIsProductOfBundledProductImpliesUsingQtyOfParentBundledProduct()
+    public function testSetValuesItemsIsProductOfBundledProductImpliesUsingQtyOfParentBundledProduct(): void
     {
-        $this->item->method('getQty')
-            ->willReturn(1);
-        $this->item->method('getParentItem')
-            ->willReturn($this->parentItem);
-        $this->parentItem->method('getQty')
-            ->willReturn(3);
+        $this->item->setData('qty', 1);
+        $this->item->setParentItem($this->parentItem);
+        $this->parentItem->setData('qty', 3);
         $this->model->setValues($this->item, $this->store);
         static::assertEquals(3, $this->model->getQty());
     }
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Container::class);
+        $objectManager = Bootstrap::getObjectManager();
+        $this->model = $objectManager->create(Container::class);
+        $this->store = $objectManager->get(StoreManagerInterface::class)->getStore();
 
-        $this->product = $this->createSingleMock(
-            Product::class,
-            [
-                'getUrlInStore',
-                'getStore'
-            ],
-            ['getSmallImage']
-        );
-        $this->item = $this->createSingleMock(
-            Item::class,
-            [
-                'getProduct',
-                'getProductType',
-                'getSku',
-                'getQty',
-                'getParentItem',
-                'getName',
-                'getBaseOriginalPrice'
-            ],
-            [
-                'getTaxPercent',
-                'getQtyOrdered',
-                'getCurrentInvoiceRefundItemQty',
-                'getBaseDiscountAmount',
-                'getBaseTaxAmount',
-                'getBaseRowTotal',
-                'getDiscountTaxCompensationAmount',
-                'getBasePriceInclTax',
-                'getBasePrice',
-            ]
-        );
-        $this->item->method('getProduct')
-            ->willReturn($this->product);
-        $this->item->method('getProductType')
-            ->willReturn('abc');
-        $this->dependencyMocks['itemResolver']->method('getFinalProduct')
-            ->willReturn($this->product);
+        $this->product = $objectManager->create(Product::class);
+        $this->product->setData('store_id', $this->store->getId());
+        $this->product->setData('url_key', 'my-product');
+        $this->product->setTypeId('abc');
 
-        $this->store = $this->createSingleMock(Store::class);
-        $this->product->method('getStore')
-            ->willReturn($this->store);
+        $this->item = $objectManager->create(Item::class);
+        $this->item->setData('product', $this->product);
 
-        $this->parentItem = $this->createSingleMock(Item::class);
+        $this->parentItem = $objectManager->create(Item::class);
     }
 }

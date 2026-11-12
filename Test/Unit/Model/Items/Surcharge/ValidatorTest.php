@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -11,7 +11,7 @@ namespace Klarna\Orderlines\Test\Unit\Model\Items\Surcharge;
 
 use Klarna\Orderlines\Model\Container\Parameter;
 use Klarna\Orderlines\Model\Items\Surcharge\Validator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Surcharge\Validator
@@ -31,6 +31,7 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getSurchargeUnitPrice')
             ->willReturn(-1);
+
         static::assertFalse($this->validator->isFetchable($this->parameter));
     }
 
@@ -38,6 +39,7 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getSurchargeUnitPrice')
             ->willReturn(0);
+
         static::assertFalse($this->validator->isFetchable($this->parameter));
     }
 
@@ -45,12 +47,13 @@ class ValidatorTest extends TestCase
     {
         $this->parameter->method('getSurchargeUnitPrice')
             ->willReturn(1);
+
         static::assertTrue($this->validator->isFetchable($this->parameter));
     }
 
     protected function setUp(): void
     {
-        $this->validator = parent::setUpMocks(Validator::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
+        $this->validator = new Validator();
+        $this->parameter = $this->createStub(Parameter::class);
     }
 }

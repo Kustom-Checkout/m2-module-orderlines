@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -10,31 +10,29 @@ declare(strict_types=1);
 namespace Klarna\Orderlines\Test\Unit\Model\Fpt;
 
 use Klarna\Orderlines\Model\Fpt\Calculator;
+use Klarna\Orderlines\Model\Fpt\Validator;
 use Magento\Framework\Api\ExtensibleDataInterface;
-use Magento\Sales\Model\Order\Invoice\Item as InvoiceItem;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use Magento\Framework\DataObject;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 class CalculatorTest extends TestCase
 {
     /**
      * @var Calculator
      */
-    private $calculator;
+    private Calculator $calculator;
     /**
-     * @var ExtensibleDataInterface
+     * @var Validator|MockObject
      */
-    private $data;
+    private Validator|MockObject $validator;
 
     public function testGetFptDataItemsAreInvalid(): void
     {
-        $this->data->expects(static::once())
-            ->method('getAllItems')
-            ->willReturn([]);
-
-        $this->dependencyMocks['validator']
+        $this->validator
             ->expects(static::never())
             ->method('isValidOrderItem');
-        $this->dependencyMocks['validator']
+        $this->validator
             ->expects(static::never())
             ->method('isValidQuoteItem');
 
@@ -43,80 +41,92 @@ class CalculatorTest extends TestCase
             'name' => [],
             'reference' => []
         ];
-        $result = $this->calculator->getFptData($this->data);
+        $result = $this->calculator->getFptData($this->createData([]));
 
         static::assertSame($expected, $result);
     }
 
     public function testGetFptDataItemsWithAndWithoutAppliedWeeeTaxes(): void
     {
-        $onlyMethods = ['getOrderItem'];
-        $addMethods = ['getWeeeTaxAppliedRowAmount', 'getWeeeTaxApplied'];
+        $data = $this->createData([
+            $this->createCartItem(12, '{"ref":{"title":"VAT"}}'),
+            $this->createCartItem(21, '{"ref":{"no_title_here":""}}'),
+            $this->createCartItem(19, '{"ref":{"title":""}}'),
+            $this->createCartItem(14, '{"ref":{"title":"VAT", "title_2": "irrelevant"}}')
+        ]);
 
-        $cartItem1 = $this->mockFactory->create(InvoiceItem::class, $onlyMethods, $addMethods);
-        $cartItem2 = $this->mockFactory->create(InvoiceItem::class, $onlyMethods, $addMethods);
-        $cartItem3 = $this->mockFactory->create(InvoiceItem::class, $onlyMethods, $addMethods);
-        $cartItem4 = $this->mockFactory->create(InvoiceItem::class, $onlyMethods, $addMethods);
-
-        $this->data->expects(static::once())
-            ->method('getAllItems')
-            ->willReturn([$cartItem1, $cartItem2, $cartItem3, $cartItem4]);
-
-        $this->dependencyMocks['validator']
+        $this->validator
             ->expects(static::exactly(4))
             ->method('isValidOrderItem')
             ->willReturn(true);
-        $this->dependencyMocks['validator']
+        $this->validator
             ->expects(static::exactly(4))
             ->method('isValidQuoteItem')
             ->willReturn(true);
-
-        $cartItem1->expects(static::once())
-            ->method('getWeeeTaxAppliedRowAmount')
-            ->willReturn(12);
-        $cartItem2->expects(static::once())
-            ->method('getWeeeTaxAppliedRowAmount')
-            ->willReturn(21);
-        $cartItem3->expects(static::once())
-            ->method('getWeeeTaxAppliedRowAmount')
-            ->willReturn(19);
-        $cartItem4->expects(static::once())
-            ->method('getWeeeTaxAppliedRowAmount')
-            ->willReturn(14);
-
-        $cartItem1->expects(static::once())
-            ->method('getWeeeTaxApplied')
-            ->willReturn('{"ref":{"title":"VAT"}}');
-        $cartItem2->expects(static::once())
-            ->method('getWeeeTaxApplied')
-            ->willReturn('{"ref":{"no_title_here":""}}');
-        $cartItem3->expects(static::once())
-            ->method('getWeeeTaxApplied')
-            ->willReturn('{"ref":{"title":""}}');
-        $cartItem4->expects(static::once())
-            ->method('getWeeeTaxApplied')
-            ->willReturn('{"ref":{"title":"VAT", "title_2": "irrelevant"}}');
 
         $expected = [
             'tax' => 66,
             'name' => ['VAT'],
             'reference' => ['VAT']
         ];
-        $result = $this->calculator->getFptData($this->data);
+        $result = $this->calculator->getFptData($data);
 
         static::assertSame($expected, $result);
     }
 
-    protected function setup(): void
+    protected function setUp(): void
     {
-        $this->calculator = parent::setUpMocks(Calculator::class);
+        $this->validator = $this->createMock(Validator::class);
+        $this->calculator = new Calculator($this->validator);
+    }
 
-        $this->data = $this->mockFactory->create(
-            ExtensibleDataInterface::class,
-            [],
-            [
-                'getAllItems'
-            ]
-        );
+    /**
+     * Creating the data object holding the cart items
+     *
+     * @param array $items
+     * @return ExtensibleDataInterface
+     */
+    private function createData(array $items): ExtensibleDataInterface
+    {
+        return new class($items) implements ExtensibleDataInterface {
+            /**
+             * @var array
+             */
+            private array $items;
+
+            /**
+             * @param array $items
+             */
+            public function __construct(array $items)
+            {
+                $this->items = $items;
+            }
+
+            /**
+             * Getting back all items
+             *
+             * @return array
+             */
+            public function getAllItems(): array
+            {
+                return $this->items;
+            }
+        };
+    }
+
+    /**
+     * Creating a cart item. A real data object, so the magic weee getters work.
+     *
+     * @param int $rowAmount
+     * @param string $taxApplied
+     * @return ExtensibleDataInterface
+     */
+    private function createCartItem(int $rowAmount, string $taxApplied): ExtensibleDataInterface
+    {
+        return new class([
+            'weee_tax_applied_row_amount' => $rowAmount,
+            'weee_tax_applied' => $taxApplied
+        ]) extends DataObject implements ExtensibleDataInterface {
+        };
     }
 }

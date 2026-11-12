@@ -1,17 +1,18 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Customerbalance;
 
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
 use Klarna\Orderlines\Model\Items\Customerbalance\Validator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Customerbalance\Validator
@@ -65,9 +66,8 @@ class ValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->validator = parent::setUpMocks(Validator::class);
-
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
+        $this->validator = new Validator();
+        $this->dataHolder = $this->createStub(DataHolder::class);
+        $this->parameter = $this->createStub(Parameter::class);
     }
 }

@@ -1,17 +1,19 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Reward;
 
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Items\Reward\Calculator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
-use Magento\Quote\Model\Quote\Address\Total;
+use Klarna\Base\Helper\DataConverter;
+use Magento\Framework\DataObject;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Reward\Calculator
@@ -26,10 +28,14 @@ class CalculatorTest extends TestCase
      * @var DataHolder
      */
     private DataHolder $dataHolder;
+    /**
+     * @var DataConverter&\PHPUnit\Framework\MockObject\Stub
+     */
+    private $dataConverter;
 
     public function testCalculateAmountIsZero(): void
     {
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $this->dataConverter->method('toApiFloat')
             ->willReturn(0);
         $this->calculator->calculate($this->dataHolder);
 
@@ -43,7 +49,7 @@ class CalculatorTest extends TestCase
 
     public function testCalculateAmountIsNotZero(): void
     {
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $this->dataConverter->method('toApiFloat')
             ->willReturn(5);
         $this->calculator->calculate($this->dataHolder);
 
@@ -57,18 +63,11 @@ class CalculatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->calculator = parent::setUpMocks(Calculator::class);
+        $this->dataConverter = $this->createStub(DataConverter::class);
+        $this->calculator = new Calculator($this->dataConverter);
 
-        $total = $this->mockFactory->create(Total::class, [], ['getTitle', 'getCode']);
-        $total->method('getTitle')
-            ->willReturn(__('my_title'));
-        $total->method('getCode')
-            ->willReturn('my_code');
-        $totals = [
-            'reward' => $total
-        ];
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->dataHolder->method('getTotals')
-            ->willReturn($totals);
+        $total = new DataObject(['title' => __('my_title'), 'code' => 'my_code']);
+        $this->dataHolder = new DataHolder();
+        $this->dataHolder->setTotals(['reward' => $total]);
     }
 }

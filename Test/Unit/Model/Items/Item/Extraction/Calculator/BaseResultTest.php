@@ -1,27 +1,36 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction;
 
+use Klarna\Base\Helper\DataConverter;
 use Klarna\Orderlines\Model\ItemGenerator;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\BaseResult;
 use Klarna\Orderlines\Model\Items\Item\Extraction\Container;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\Calculator\BaseResult
  */
+#[AllowMockObjectsWithoutExpectations]
 class BaseResultTest extends TestCase
 {
     /**
      * @var BaseResult
      */
     private BaseResult $model;
+    /**
+     * @var DataConverter|MockObject
+     */
+    private DataConverter $dataConverter;
     /**
      * @var Container
      */
@@ -98,7 +107,7 @@ class BaseResultTest extends TestCase
         $expected = (float) 700;
         $this->container->method('getDiscountAmount')
             ->willReturn((float) 7);
-        $this->dependencyMocks['dataConverter']->method('toApiFloat')
+        $this->dataConverter->method('toApiFloat')
             ->with(7)
             ->willReturn($expected);
 
@@ -106,13 +115,13 @@ class BaseResultTest extends TestCase
         static::assertEquals($expected, $result['total_discount_amount']);
     }
 
-    public function testGetFromContainerNoProductUrlSinceNotGiven():void
+    public function testGetFromContainerNoProductUrlSinceNotGiven(): void
     {
         $result = $this->model->getFromContainer($this->container);
         static::assertTrue(!isset($result['product_url']));
     }
 
-    public function testGetFromContainerReturningProductUrl():void
+    public function testGetFromContainerReturningProductUrl(): void
     {
         $expected = 'my_url';
         $this->container->method('getProductUrl')
@@ -128,7 +137,7 @@ class BaseResultTest extends TestCase
         static::assertTrue(!isset($result['image_url']));
     }
 
-    public function testGetFromContainerReturningImageUrl():void
+    public function testGetFromContainerReturningImageUrl(): void
     {
         $expected = 'my_url';
         $this->container->method('getImageUrl')
@@ -140,7 +149,8 @@ class BaseResultTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(BaseResult::class);
-        $this->container = $this->mockFactory->create(Container::class);
+        $this->dataConverter = $this->createMock(DataConverter::class);
+        $this->model = new BaseResult($this->dataConverter);
+        $this->container = $this->createStub(Container::class);
     }
 }

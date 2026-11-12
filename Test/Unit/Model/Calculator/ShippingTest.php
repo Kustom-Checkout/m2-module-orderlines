@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Kustom AB (Originally developed by Klarna Bank AB)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -11,17 +11,20 @@ namespace Klarna\Orderlines\Test\Unit\Model\Calculator;
 
 use Klarna\Orderlines\Model\Calculator\Shipping;
 use Klarna\Orderlines\Model\Container\DataHolder;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Quote\Model\Quote\Address;
+use Magento\Tax\Api\OrderTaxManagementInterface;
 use Magento\Sales\Model\Order;
 use Magento\Tax\Api\Data\OrderTaxDetailsAppliedTaxInterface;
 use Magento\Tax\Api\Data\OrderTaxDetailsInterface;
 use Magento\Tax\Api\Data\OrderTaxDetailsItemInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Calculator\Shipping
  */
+#[AllowMockObjectsWithoutExpectations]
 class ShippingTest extends TestCase
 {
     /**
@@ -32,6 +35,10 @@ class ShippingTest extends TestCase
      * @var DataHolder
      */
     private DataHolder $dataHolder;
+    /**
+     * @var OrderTaxManagementInterface&\PHPUnit\Framework\MockObject\Stub
+     */
+    private $orderTaxManagement;
     /**
      * @var Address
      */
@@ -134,7 +141,7 @@ class ShippingTest extends TestCase
 
     public function testGetTaxRateByOrderUsesOrderTotalsWhenStoredTaxDetailsCannotBeRead(): void
     {
-        $this->dependencyMocks['orderTaxManagement']
+        $this->orderTaxManagement
             ->method('getOrderTaxDetails')
             ->willThrowException(new NoSuchEntityException());
         static::assertEquals(25.06, $this->model->getTaxRateByOrder($this->createOrder(3.99, 1.0)));
@@ -154,9 +161,10 @@ class ShippingTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Shipping::class);
+        $this->orderTaxManagement = $this->createStub(OrderTaxManagementInterface::class);
+        $this->model = new Shipping($this->orderTaxManagement);
 
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
         // Quote address whose getData() (and so its magic getters) reads the data set in each test
         $this->shippingAddress = $this->getMockBuilder(Address::class)
             ->disableOriginalConstructor()
@@ -202,7 +210,7 @@ class ShippingTest extends TestCase
      */
     private function createOrder(float $shippingAmount, float $shippingTaxAmount): Order
     {
-        $order = $this->mockFactory->create(Order::class);
+        $order = $this->createStub(Order::class);
         $order->method('getEntityId')
             ->willReturn(1);
         $order->method('getBaseShippingAmount')
@@ -224,13 +232,13 @@ class ShippingTest extends TestCase
         foreach ($items as [$type, $percents]) {
             $appliedTaxes = [];
             foreach ($percents as $percent) {
-                $appliedTax = $this->mockFactory->create(OrderTaxDetailsAppliedTaxInterface::class);
+                $appliedTax = $this->createStub(OrderTaxDetailsAppliedTaxInterface::class);
                 $appliedTax->method('getPercent')
                     ->willReturn($percent);
                 $appliedTaxes[] = $appliedTax;
             }
 
-            $taxItem = $this->mockFactory->create(OrderTaxDetailsItemInterface::class);
+            $taxItem = $this->createStub(OrderTaxDetailsItemInterface::class);
             $taxItem->method('getType')
                 ->willReturn($type);
             $taxItem->method('getAppliedTaxes')
@@ -238,10 +246,10 @@ class ShippingTest extends TestCase
             $taxItems[] = $taxItem;
         }
 
-        $taxDetails = $this->mockFactory->create(OrderTaxDetailsInterface::class);
+        $taxDetails = $this->createStub(OrderTaxDetailsInterface::class);
         $taxDetails->method('getItems')
             ->willReturn($taxItems);
-        $this->dependencyMocks['orderTaxManagement']
+        $this->orderTaxManagement
             ->method('getOrderTaxDetails')
             ->willReturn($taxDetails);
     }

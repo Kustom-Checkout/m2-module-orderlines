@@ -1,16 +1,17 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model;
 
 use Klarna\Orderlines\Model\Container\Parameter;
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Klarna\Orderlines\Model\ItemGenerator;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\ItemGenerator
@@ -306,7 +307,7 @@ class ItemGeneratorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(ItemGenerator::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
+        $this->model = new ItemGenerator();
+        $this->parameter = $this->createStub(Parameter::class);
     }
 }

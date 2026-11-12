@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -9,11 +9,11 @@ declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Calculator\ItemShippingAttributes;
 
-use Klarna\Base\Test\Unit\Mock\TestCase;
 use Klarna\Orderlines\Model\Calculator\ItemShippingAttributes\Categories;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Category\Collection;
 use Magento\Catalog\Model\Category;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Calculator\ItemShippingAttributes\Categories
@@ -32,10 +32,6 @@ class CategoriesTest extends TestCase
      * @var Collection
      */
     private Collection $collection;
-    /**
-     * @var Category
-     */
-    private Category $category;
 
     public function testGetNoCollectionGivenImpliesReturningEmptyArray(): void
     {
@@ -63,21 +59,21 @@ class CategoriesTest extends TestCase
             ->method('getCategoryCollection')
             ->willReturn($this->collection);
 
-        $this->category->expects($this->once())
+        $category = $this->createMock(Category::class);
+        $category->expects($this->once())
             ->method('getName')
             ->willReturn('Category Name');
         $this->collection->method('getItems')
-            ->willReturn([$this->category]);
+            ->willReturn([$category]);
 
         $this->assertSame(['Category Name'], $this->categories->get($this->product));
     }
 
     protected function setUp(): void
     {
-        $this->categories = parent::setUpMocks(Categories::class);
-        $this->product = $this->mockFactory->create(Product::class);
+        $this->categories = new Categories();
+        $this->product = $this->createMock(Product::class);
 
-        $this->collection = $this->createMock(Collection::class);
-        $this->category = $this->createMock(Category::class);
+        $this->collection = $this->createStub(Collection::class);
     }
 }

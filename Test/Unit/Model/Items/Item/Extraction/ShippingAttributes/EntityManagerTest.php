@@ -1,16 +1,20 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Item\Extraction\ShippingAttributes;
 
 use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\EntityManager;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Dimensions;
+use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Tags;
+use Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\Entities\Weight;
 use Magento\Catalog\Model\Product;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Item\Extraction\ShippingAttributes\EntityManager
@@ -22,6 +26,18 @@ class EntityManagerTest extends TestCase
      */
     private EntityManager $model;
     /**
+     * @var Dimensions
+     */
+    private Dimensions $dimensions;
+    /**
+     * @var Tags
+     */
+    private Tags $tags;
+    /**
+     * @var Weight
+     */
+    private Weight $weight;
+    /**
      * @var Product
      */
     private Product $product;
@@ -29,7 +45,7 @@ class EntityManagerTest extends TestCase
     public function testAttachToItemReturningDimensionsValue(): void
     {
         $expected = ['abc' => 'def'];
-        $this->dependencyMocks['dimensions']->method('get')
+        $this->dimensions->method('get')
             ->willReturn($expected);
 
         $result = $this->model->attachToItem([], $this->product);
@@ -39,7 +55,7 @@ class EntityManagerTest extends TestCase
     public function testAttachToItemReturningTagsValue(): void
     {
         $expected = ['abc' => 'def'];
-        $this->dependencyMocks['tags']->method('get')
+        $this->tags->method('get')
             ->willReturn($expected);
 
         $result = $this->model->attachToItem([], $this->product);
@@ -49,7 +65,7 @@ class EntityManagerTest extends TestCase
     public function testAttachToItemReturningWeightValue(): void
     {
         $expected = (float) 7;
-        $this->dependencyMocks['weight']->method('get')
+        $this->weight->method('get')
             ->willReturn($expected);
 
         $result = $this->model->attachToItem([], $this->product);
@@ -58,7 +74,10 @@ class EntityManagerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(EntityManager::class);
-        $this->product = $this->mockFactory->create(Product::class);
+        $this->dimensions = $this->createStub(Dimensions::class);
+        $this->tags = $this->createStub(Tags::class);
+        $this->weight = $this->createStub(Weight::class);
+        $this->model = new EntityManager($this->dimensions, $this->tags, $this->weight);
+        $this->product = $this->createStub(Product::class);
     }
 }

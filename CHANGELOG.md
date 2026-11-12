@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.2.1 / 2026-11-10
+
+### Breaking changes
+* None
+
+### Features / changes
+* KUSTOM-124: Removed the shared Kustom unit test helpers from the module tests
+* KUSTOM-124: Moved the Extraction\Container tests to integration tests
+
+### Fixes
+* KUSTOM-124: Fixed 69 unit tests that were silently skipped on PHPUnit 12, and 3 that never ran
+
 ## 3.2.0 / 2026-11-10
 
 ### Breaking changes

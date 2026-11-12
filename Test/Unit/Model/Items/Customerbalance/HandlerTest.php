@@ -1,19 +1,23 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Customerbalance;
 
 use Klarna\Orderlines\Model\Container\DataHolder;
 use Klarna\Orderlines\Model\Container\Parameter;
+use Klarna\Orderlines\Model\ItemGenerator;
 use Klarna\Orderlines\Model\Items\Customerbalance\Handler;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use Klarna\Orderlines\Model\Items\Customerbalance\Processor;
+use Klarna\Orderlines\Model\Items\Customerbalance\Validator;
 use Magento\Quote\Model\Quote;
 use Magento\Sales\Model\Order;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Customerbalance\Handler
@@ -25,14 +29,6 @@ class HandlerTest extends TestCase
      */
     private DataHolder $dataHolder;
     /**
-     * @var Parameter
-     */
-    private Parameter $parameter;
-    /**
-     * @var Handler 
-     */
-    private Handler $handler;
-    /**
      * @var Quote
      */
     private Quote $quote;
@@ -40,74 +36,101 @@ class HandlerTest extends TestCase
      * @var Order
      */
     private Order $order;
+    /**
+     * @var Validator
+     */
+    private Validator $validator;
 
     public function testCollectPostPurchaseNotCollectableAndWillNotBeProcessed(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isCollectable')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects(static::never())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::never())
             ->method('process');
 
-        $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->order);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPostPurchase($this->createStub(Parameter::class), $this->dataHolder, $this->order);
     }
 
     public function testCollectPostPurchaseCollectableAndWillBeProcessed(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isCollectable')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects(static::once())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::once())
             ->method('process');
 
-        $this->handler->collectPostPurchase($this->parameter, $this->dataHolder, $this->order);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPostPurchase($this->createStub(Parameter::class), $this->dataHolder, $this->order);
     }
 
     public function testCollectPrePurchaseNotCollectableAndWillNotBeProcessed(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isCollectable')
             ->willReturn(false);
-        $this->dependencyMocks['processor']->expects(static::never())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::never())
             ->method('process');
 
-        $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->quote);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPrePurchase($this->createStub(Parameter::class), $this->dataHolder, $this->quote);
     }
 
     public function testCollectPrePurchaseCollectableAndWillBeProcessed(): void
     {
-        $this->dependencyMocks['validator']->method('isCollectable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isCollectable')
             ->willReturn(true);
-        $this->dependencyMocks['processor']->expects(static::once())
+        $processor = $this->createMock(Processor::class);
+        $processor->expects(static::once())
             ->method('process');
 
-        $this->handler->collectPrePurchase($this->parameter, $this->dataHolder, $this->quote);
+        $handler = $this->buildHandler($processor);
+        $handler->collectPrePurchase($this->createStub(Parameter::class), $this->dataHolder, $this->quote);
     }
 
     public function testFetchNotFetchableAndNoOrderLineItemWillBeAdded(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isFetchable')
             ->willReturn(false);
-        $this->parameter->expects(static::never())
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::never())
             ->method('addOrderLine');
 
-        $this->handler->fetch($this->parameter);
+        $this->buildHandler($this->createStub(Processor::class))->fetch($parameter);
     }
 
     public function testFetchFetchableAndOrderLineItemWillBeAdded(): void
     {
-        $this->dependencyMocks['validator']->method('isFetchable')
+        $this->validator = $this->createStub(Validator::class);
+        $this->validator->method('isFetchable')
             ->willReturn(true);
-        $this->parameter->expects(static::once())
+        $parameter = $this->createMock(Parameter::class);
+        $parameter->expects(static::once())
             ->method('addOrderLine');
 
-        $this->handler->fetch($this->parameter);
+        $this->buildHandler($this->createStub(Processor::class))->fetch($parameter);
     }
-    
+
     protected function setUp(): void
     {
-        $this->handler = parent::setUpMocks(Handler::class);
+        $this->validator = $this->createStub(Validator::class);
+        $this->dataHolder = $this->createStub(DataHolder::class);
+        $this->quote = $this->createStub(Quote::class);
+        $this->order = $this->createStub(Order::class);
+    }
 
-        $this->dataHolder = $this->mockFactory->create(DataHolder::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
-        $this->quote = $this->mockFactory->create(Quote::class);
-        $this->order = $this->mockFactory->create(Order::class);
+    private function buildHandler(Processor $processor): Handler
+    {
+        return new Handler(
+            $this->createStub(ItemGenerator::class),
+            $this->validator,
+            $processor
+        );
     }
 }

@@ -1,16 +1,17 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
  */
+declare(strict_types=1);
 
 namespace Klarna\Orderlines\Test\Unit\Model\Items\Giftcard;
 
 use Klarna\Orderlines\Model\Container\Parameter;
 use Klarna\Orderlines\Model\Items\Giftcard\Validator;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * @coversDefaultClass \Klarna\Orderlines\Model\Items\Giftcard\Validator
@@ -34,7 +35,7 @@ class ValidatorTest extends TestCase
         static::assertTrue($this->model->isFetchable($this->parameter));
     }
 
-    public function testIsFetchableGiftcardAmountIsNegative()
+    public function testIsFetchableGiftcardAmountIsNegative(): void
     {
         $this->parameter->method('getGiftCardAccountTotalAmount')
             ->willReturn(-1);
@@ -42,7 +43,7 @@ class ValidatorTest extends TestCase
         static::assertTrue($this->model->isFetchable($this->parameter));
     }
 
-    public function testIsFetchableGiftcardAmountIsZero()
+    public function testIsFetchableGiftcardAmountIsZero(): void
     {
         $this->parameter->method('getGiftCardAccountTotalAmount')
             ->willReturn(0);
@@ -52,7 +53,7 @@ class ValidatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->model = parent::setUpMocks(Validator::class);
-        $this->parameter = $this->mockFactory->create(Parameter::class);
+        $this->model = new Validator();
+        $this->parameter = $this->createStub(Parameter::class);
     }
 }

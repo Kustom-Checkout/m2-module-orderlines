@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © Klarna Bank AB (publ)
+ * Copyright © Kustom AB
  *
  * For the full copyright and license information, please view the NOTICE
  * and LICENSE files that were distributed with this source code.
@@ -11,9 +11,11 @@ namespace Klarna\Orderlines\Test\Unit\Model\Fpt;
 
 use Magento\Store\Api\Data\StoreInterface;
 use Klarna\Orderlines\Model\Fpt\Validator;
-use Magento\Framework\Api\ExtensibleDataInterface;
-use Magento\Store\Model\Store;
-use Klarna\Base\Test\Unit\Mock\TestCase;
+use Klarna\Orderlines\Model\ProductTypeChecker;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Sales\Model\Order\Creditmemo;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 use Magento\Sales\Model\Order\Creditmemo\Item as CreditMemoItem;
 use Magento\Sales\Model\Order\Invoice\Item as InvoiceItem;
 use Magento\Sales\Model\Order\Item as OrderItem;
@@ -26,13 +28,21 @@ class ValidatorTest extends TestCase
      */
     private $validator;
     /**
-     * @var Store
+     * @var StoreInterface
      */
     private $store;
     /**
-     * @var ExtensibleDataInterface
+     * @var Creditmemo
      */
     private $data;
+    /**
+     * @var ProductTypeChecker
+     */
+    private $productTypeChecker;
+    /**
+     * @var ScopeConfigInterface
+     */
+    private $scopeConfig;
     /**
      * @var InvoiceItem
      */
@@ -52,25 +62,25 @@ class ValidatorTest extends TestCase
 
     public function testIsFptUsableTrue(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('value');
-        $this->dependencyMocks['scopeConfig']->method('isSetFlag')
+        $this->scopeConfig->method('isSetFlag')
             ->willReturn(true);
         static::assertTrue($this->validator->isFptUsable($this->store));
     }
 
     public function testIsFptUsableFlagNotSet(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('isSetFlag')
+        $this->scopeConfig->method('isSetFlag')
             ->willReturn(false);
         static::assertFalse($this->validator->isFptUsable($this->store));
     }
 
     public function testIsFptUsableGetValueReturnsNull(): void
     {
-        $this->dependencyMocks['scopeConfig']->method('isSetFlag')
+        $this->scopeConfig->method('isSetFlag')
             ->willReturn(true);
-        $this->dependencyMocks['scopeConfig']->method('getValue')
+        $this->scopeConfig->method('getValue')
             ->willReturn('');
         static::assertFalse($this->validator->isFptUsable($this->store));
     }
@@ -106,7 +116,7 @@ class ValidatorTest extends TestCase
     {
         $this->creditInvoiceItemValidHelper();
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(true);
 
@@ -117,10 +127,10 @@ class ValidatorTest extends TestCase
     {
         $this->creditInvoiceItemValidHelper();
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithFixedPriceType')
             ->willReturn(true);
 
@@ -131,13 +141,13 @@ class ValidatorTest extends TestCase
     {
         $this->creditInvoiceItemValidHelper();
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithFixedPriceType')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithDynamicPriceType')
             ->willReturn(true);
 
@@ -148,15 +158,18 @@ class ValidatorTest extends TestCase
     {
         $this->creditInvoiceItemValidHelper();
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithFixedPriceType')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']
+        $dynamicChecks = [false, true];
+        $this->checkerMock()->expects(static::exactly(2))
             ->method('isBundledProductWithDynamicPriceType')
-            ->willReturnOnConsecutiveCalls(false, true);
+            ->willReturnCallback(function () use (&$dynamicChecks): bool {
+                return array_shift($dynamicChecks);
+            });
 
         static::assertFalse($this->validator->isValidOrderItem($this->data, $this->creditMemoItem));
     }
@@ -165,15 +178,12 @@ class ValidatorTest extends TestCase
     {
         $this->creditInvoiceItemValidHelper();
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithFixedPriceType')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
-            ->method('isBundledProductWithFixedPriceType')
-            ->willReturnOnConsecutiveCalls(false, false);
 
         static::assertTrue($this->validator->isValidOrderItem($this->data, $this->creditMemoItem));
     }
@@ -189,17 +199,29 @@ class ValidatorTest extends TestCase
         $this->data->method('getItemById')
             ->willReturn($this->invoiceItem);
 
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isNonBundleProduct')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']->expects(static::once())
+        $this->checkerMock()->expects(static::once())
             ->method('isBundledProductWithFixedPriceType')
             ->willReturn(false);
-        $this->dependencyMocks['productTypeChecker']
-            ->method('isBundledProductWithFixedPriceType')
-            ->willReturnOnConsecutiveCalls(false, false);
 
         static::assertTrue($this->validator->isValidOrderItem($this->data, $this->invoiceItem));
+    }
+
+    /**
+     * Swaps the product type checker for a mock (only the tests that set expectations on it use one)
+     *
+     * @return ProductTypeChecker|MockObject
+     */
+    private function checkerMock()
+    {
+        if (!$this->productTypeChecker instanceof MockObject) {
+            $this->productTypeChecker = $this->createMock(ProductTypeChecker::class);
+            $this->validator = new Validator($this->productTypeChecker, $this->scopeConfig);
+        }
+
+        return $this->productTypeChecker;
     }
 
     private function creditInvoiceItemValidHelper(): void
@@ -214,27 +236,19 @@ class ValidatorTest extends TestCase
             ->willReturn($this->creditMemoItem);
     }
 
-    protected function setup(): void
+    protected function setUp(): void
     {
-        $this->validator = parent::setUpMocks(Validator::class);
+        $this->productTypeChecker = $this->createStub(ProductTypeChecker::class);
+        $this->scopeConfig = $this->createStub(ScopeConfigInterface::class);
+        $this->validator = new Validator($this->productTypeChecker, $this->scopeConfig);
 
-        $this->store = $this->mockFactory->create(StoreInterface::class);
-        $this->order = $this->mockFactory->create(OrderItemInterface::class);
+        $this->store = $this->createStub(StoreInterface::class);
+        $this->order = $this->createStub(OrderItemInterface::class);
 
-        $this->data = $this->mockFactory->create(
-            ExtensibleDataInterface::class,
-            [],
-            [
-                'getItemById'
-            ]
-        );
-        $creditAndInvoiceItemMockMethods = ['getOrderItem'];
-        $this->creditMemoItem = $this->mockFactory->create(CreditMemoItem::class, $creditAndInvoiceItemMockMethods);
-        $this->invoiceItem = $this->mockFactory->create(InvoiceItem::class, $creditAndInvoiceItemMockMethods);
-
-        $this->item = $this->mockFactory->create(OrderItem::class, [
-            'getParentItem',
-            'getParentItemId'
-        ]);
+        // Real class with a real getItemById() (not part of ExtensibleDataInterface itself)
+        $this->data = $this->createStub(Creditmemo::class);
+        $this->creditMemoItem = $this->createStub(CreditMemoItem::class);
+        $this->invoiceItem = $this->createStub(InvoiceItem::class);
+        $this->item = $this->createStub(OrderItem::class);
     }
 }
