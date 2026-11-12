@@ -29,13 +29,16 @@ class PostPurchaseCalculatorTest extends TestCase
     private const ORDER_ID = 990001;
 
     /**
+     * Untyped on purpose: Magento 2.4.5 - 2.4.7 set test properties to null after each test, which fails for
+     * non-nullable typed properties.
+     *
      * @var ObjectManagerInterface
      */
-    private ObjectManagerInterface $objectManager;
+    private $objectManager;
     /**
      * @var ResourceConnection
      */
-    private ResourceConnection $resource;
+    private $resource;
 
     public function testCaptureOfShippingSendsTheRateMagentoStoredInsteadOfTheRoundedRatio(): void
     {
