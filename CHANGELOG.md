@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.1.1-p1 / 2026-11-10
+
+### Breaking changes
+* None
+
+### Features / changes
+* KUSTOM-124: Added Calculator\Shipping::getTaxRateByOrder() to get the shipping tax rate Magento applied to an order
+
+### Fixes
+* KUSTOM-124: Fixed shipping tax rate on capture and refund to use the rate Magento applied
+* KUSTOM-124: Fixed shipping tax sent on captures without shipping
+* KUSTOM-124: Fixed item amounts on captures and refunds of part of the ordered quantity
+
 ## 3.1.1 / 2026-08-19
 
 ### Breaking changes
